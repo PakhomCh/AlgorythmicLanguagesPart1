@@ -1,6 +1,8 @@
 ﻿#include <iostream>
+#include <fstream>
 #include <string>
 #include <locale>
+#include <vector>
 
 using namespace std;
 
@@ -25,6 +27,13 @@ struct station
 	int workshops, workshopsUsed;
 	float efficiency;
 
+};
+
+struct save
+{
+	bool tubeAdded, stationAdded;
+	tube mainTube;
+	station mainStation;
 };
 
 tube newTube(int length = 1, int diameter = 1)
@@ -62,7 +71,7 @@ void printMenuOptions()
 	cout << "5. Редактировать КС\n";
 	cout << "6. Сохранить\n";
 	cout << "7. Загрузить\n";
-	cout << "8. Отчистить\n";
+	cout << "8. Очистить\n";
 	cout << "0. Выход\n";
 
 }
@@ -150,6 +159,8 @@ tube editTube(tube object)
 station editStation(station object)
 {
 
+
+
 	station replacement;
 	string name;
 	int workshops, wsused;
@@ -190,7 +201,7 @@ station editStation(station object)
 	cout << "Введите число используемых цехов (не более " << replacement.workshops << "): ";
 
 	cin >> wsused;
-	while (!cin || wsused < 0)
+	while (!cin || wsused < 0 || wsused > replacement.workshops)
 	{
 		cout << " ";
 		cin.clear();
@@ -219,9 +230,62 @@ station editStation(station object)
 
 }
 
+save newSave(bool tubeAdded, bool stationAdded, tube mainTube, station mainStation)
+{
+	save mainSave;
+	mainSave.tubeAdded = tubeAdded;
+	mainSave.stationAdded = stationAdded;
+	mainSave.mainTube = mainTube;
+	mainSave.mainStation = mainStation;
+
+	return mainSave;
+}
+
+void pushSave(save saveData)
+{
+	ofstream out;
+	out.open("save.txt");
+
+	if (saveData.tubeAdded)				// Save tube status
+		out << "1\n";
+	else
+		out << "0\n";
+
+	if (saveData.stationAdded)			//  Save station status
+		out << "1\n";
+	else
+		out << "0\n";
+
+	if (saveData.tubeAdded)				//  Save tube info
+	{
+		out << saveData.mainTube.length << " " << saveData.mainTube.diameter << " ";
+		if (saveData.mainTube.onRepair)
+			out << "1\n";
+		else
+			out << "0\n";
+	}
+
+	if (saveData.tubeAdded)				//  Save station info
+		out << saveData.mainStation.name << " " << saveData.mainStation.workshops << " " << saveData.mainStation.workshopsUsed << " " << saveData.mainStation.efficiency << " ";
+
+	out.close();
+}
+
+save loadSave()
+{
+	save mainSave = newSave(false, false, newTube(), newStation("Untitled"));
+
+	ifstream in;
+	in.open("save.txt");
+	in >> mainSave.tubeAdded >> mainSave.stationAdded;
+	in >> mainSave.mainTube.length >> mainSave.mainTube.diameter >> mainSave.mainTube.onRepair;
+	in >> mainSave.mainStation.name >> mainSave.mainStation.workshops >> mainSave.mainStation.workshopsUsed >> mainSave.mainStation.efficiency;
+	
+	return mainSave;
+}
+
 int main()
 {
-
 	setlocale(LC_ALL, "Ru");
 
 	bool isRunning = true; // States if program is supposed to run
@@ -229,8 +293,9 @@ int main()
 	bool tubeAdded = false, stationAdded = false;
 	int command;
 
-	tube mainTube;
-	station mainStation;
+	tube mainTube = newTube();
+	station mainStation = newStation("Untitled");
+	save saveData;
 
 	while (isRunning)
 	{
@@ -238,7 +303,7 @@ int main()
 
 		cout << "\nВведите команду: ";
 		cin >> command;
-		while (!cin)
+		while (!cin || command < 0)
 		{
 			cout << "\nВведите команду: ";
 			cin.clear();
@@ -246,7 +311,7 @@ int main()
 			cin >> command;
 		}
 
-		clc(); //  Clear screen;
+		clc(); //  Clear screen
 
 		switch (command)					//  Run the command got from user
 		{
@@ -257,13 +322,15 @@ int main()
 			tubeAdded = true;
 			mainTube = newTube();
 		case 4:								//  Edit tube
-			mainTube = editTube(mainTube);
+			if (tubeAdded)
+				mainTube = editTube(mainTube);
 			break;
 		case 2:								//  Create station
 			stationAdded = true;
 			mainStation = newStation("Untitled");
 		case 5:								//  Edit station
-			mainStation = editStation(mainStation);
+			if (stationAdded)
+				mainStation = editStation(mainStation);
 			break;
 		case 3:								//  Check if there is tube/station to print info about
 			if (tubeAdded)
@@ -273,11 +340,18 @@ int main()
 			if (!(tubeAdded || stationAdded))
 				cout << "Ни станции, ни трубы не добавлено.\n\n";
 			break;
-		case 6:								//  TODO: Save
+		case 6:								//  Save
+			saveData = newSave(tubeAdded, stationAdded, mainTube, mainStation);
+			pushSave(saveData);
 			break;
-		case 7:								//  TODO: Load
+		case 7:								//  Load
+			saveData = loadSave();
+			tubeAdded = saveData.tubeAdded;
+			stationAdded = saveData.stationAdded;
+			mainTube = saveData.mainTube;
+			mainStation = saveData.mainStation;
 			break;
-		case 8:								//  TODO: Clear
+		case 8:								//  Clear
 			tubeAdded = false;
 			stationAdded = false;
 			break;
