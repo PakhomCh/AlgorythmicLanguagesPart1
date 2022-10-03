@@ -293,7 +293,7 @@ int main()
 
 		cout << "\nВведите команду: ";
 		cin >> command;
-		while (!cin || command < 0 || command > 8)
+		while (!cin || command < 0)
 		{
 			cout << "\nВведите команду: ";
 			cin.clear();
