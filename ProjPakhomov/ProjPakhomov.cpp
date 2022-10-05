@@ -2,68 +2,48 @@
 #include <fstream>
 #include <string>
 #include <locale>
-#include <vector>
+#include <stdlib.h>
 
 using namespace std;
 
-void clc()
+template <typename T>
+void read(T& value, string comment = "Введите значение", float min = 0, float max = -1)
 {
-	for (int i = 0; i < 100; i++)
-		cout << "\n";
+	cout << comment << ": ";
+	cin >> value;
+
+	if (typeid(T) == typeid(int) || typeid(T) == typeid(float))
+	{
+		while (!cin || value < min || (value > max && max >= min))
+		{
+			cout << comment << ": ";
+			cin.clear();
+			cin.ignore(numeric_limits<streamsize>::max(), '\n');
+			cin >> value;
+		}
+	}
+
+	if (typeid(T) == typeid(bool))
+	{
+		while (!cin)
+		{
+			cout << comment << ": ";
+			cin.clear();
+			cin.ignore(numeric_limits<streamsize>::max(), '\n');
+			cin >> value;
+		} 
+	}
 }
 
-struct tube
+void read(string& value, string comment = "Введите значение")
 {
-
-	int length, diameter;
-	bool onRepair;
-
-};
-
-struct station
-{
-
-	string name;
-	int workshops, workshopsUsed;
-	float efficiency;
-
-};
-
-struct save
-{
-	bool tubeAdded, stationAdded;
-	tube mainTube;
-	station mainStation;
-};
-
-tube newTube(int length = 1, int diameter = 1)
-{
-
-	tube t;
-	t.length = length;
-	t.diameter = diameter;
-	t.onRepair = false;
-
-	return t;
-
-}
-
-station newStation(string name, int workshops = 1, int workshopsused = 0, float efficiency = 1.0)
-{
-
-	station s;
-	s.name = name;
-	s.workshops = workshops;
-	s.workshopsUsed = workshopsused;
-	s.efficiency = efficiency;
-
-	return s;
-
+	cout << comment << ": ";
+	cin >> ws;
+	getline(cin, value);
 }
 
 void printMenuOptions()
 {
-
 	cout << "1. Добавить трубу\n";
 	cout << "2. Добавить КС\n";
 	cout << "3. Просмотр всех объектов\n";
@@ -73,235 +53,114 @@ void printMenuOptions()
 	cout << "7. Загрузить\n";
 	cout << "8. Очистить\n";
 	cout << "0. Выход\n";
-
 }
+
+struct tube
+{
+	int length, diameter;
+	bool isWorking;
+};
+
+struct station
+{
+	string name;
+	int workshops, workshopsUsed;
+	float efficiency;
+};
 
 void printStats(tube object)
 {
-
 	cout << "Добавлена труба.\n";
 	cout << "Длина: " << object.length << "\n";
 	cout << "Диаметр: " << object.diameter << "\n";
-	cout << "Статус: " << (object.onRepair ? "В ремонте\n\n" : "В работе\n\n");
-
+	cout << "Статус: " << (object.isWorking ? "В ремонте\n" : "В работе\n");
 }
 
 void printStats(station object)
 {
-
 	cout << "Добавлена станция \"" << object.name << "\"\n";
 	cout << "Цехов: " << object.workshops << "\n";
 	cout << "Из них в работе: " << object.workshopsUsed << "\n";
-	cout << "КПД: " << object.efficiency << "\n\n";
-
+	cout << "Эффективность: " << object.efficiency << "\n";
 }
 
-tube editTube(tube object)
+void save(bool tubeAdded, bool stationAdded, tube sTube, station sStation)
 {
-
-	tube replacement;
-	int length, diameter, status;
-
-	cout << "Введите новый диаметр или 0, чтобы сохранить текущий: ";
-	
-	cin >> diameter;
-	while (!cin || diameter < 0)
+	ofstream file;
+	file.open("save.txt");
+	if (file)
 	{
-		cout << " ";
-		cin.clear();
-		cin.ignore(numeric_limits<streamsize>::max(), '\n');
-		cin >> diameter;
+		file << tubeAdded << endl;
+		file << stationAdded << endl;
+
+		if (tubeAdded)
+		{
+			file << sTube.length << endl;
+			file << sTube.diameter << endl;
+			file << sTube.isWorking << endl;
+		}
+
+		if (stationAdded)
+		{
+			file << sStation.name << endl;
+			file << sStation.workshops << endl;
+			file << sStation.workshopsUsed << endl;
+			file << sStation.efficiency << endl;
+		}
 	}
 
-	if (diameter > 0)
-		replacement.diameter = diameter;
-	else
-		replacement.diameter = object.diameter;
-
-	cout << "Введите новую длину или 0, чтобы сохранить текущую: ";
-
-	cin >> length;
-	while (!cin || length < 0)
-	{
-		cout << " ";
-		cin.clear();
-		cin.ignore(numeric_limits<streamsize>::max(), '\n');
-		cin >> length;
-	}
-
-	if (length > 0)
-		replacement.length = length;
-	else
-		replacement.length = object.length;
-
-	cout << "Введите статус трубы (1 - Работает, 0 - В ремонте): ";
-
-	cin >> status;
-	while (!cin || (status != 0 && status != 1))
-	{
-		cout << " ";
-		cin.clear();
-		cin.ignore(numeric_limits<streamsize>::max(), '\n');
-		cin >> status;
-	}
-
-	replacement.onRepair = !status;
-
-	cout << "\n\n";
-
-	return replacement;
-
+	file.close();
 }
 
-station editStation(station object)
+void load(bool& tubeAdded, bool& stationAdded, tube& sTube, station& sStation)
 {
-
-
-
-	station replacement;
-	string name;
-	int workshops, wsused;
-	float efficiency;
-
-	cout << "Введите новое название или 0, чтобы сохранить текущее: ";
-
-	cin >> name;
-	while (!cin)
+	ifstream file;
+	file.open("save.txt");
+	if (file)
 	{
-		cout << " ";
-		cin.clear();
-		cin.ignore(numeric_limits<streamsize>::max(), '\n');
-		cin >> name;
+		file >> tubeAdded;
+		file >> stationAdded;
+
+		if (tubeAdded)
+		{
+			file >> sTube.length;
+			file >> sTube.diameter;
+			file >> sTube.isWorking;
+		}
+
+		if (stationAdded)
+		{
+			file >> ws;
+			getline(file, sStation.name);
+			file >> sStation.workshops;
+			file >> sStation.workshopsUsed;
+			file >> sStation.efficiency;
+		}
 	}
 
-	if (name != "0")
-		replacement.name = name;
-	else
-		replacement.name = object.name;
-
-	cout << "Введите новое число цехов или 0, чтобы сохранить текущее: ";
-
-	cin >> workshops;
-	while (!cin || workshops < 0)
-	{
-		cout << " ";
-		cin.clear();
-		cin.ignore(numeric_limits<streamsize>::max(), '\n');
-		cin >> workshops;
-	}
-
-	if (workshops > 0)
-		replacement.workshops = workshops;
-	else
-		replacement.workshops = object.workshops;
-
-	cout << "Введите число используемых цехов (не более " << replacement.workshops << "): ";
-
-	cin >> wsused;
-	while (!cin || wsused < 0 || wsused > replacement.workshops)
-	{
-		cout << " ";
-		cin.clear();
-		cin.ignore(numeric_limits<streamsize>::max(), '\n');
-		cin >> wsused;
-	}
-
-	replacement.workshopsUsed = wsused;
-	
-	cout << "Введите эффективность КС (От 0 до 1): ";
-
-	cin >> efficiency;
-	while (!cin || efficiency < 0 || efficiency > 1)
-	{
-		cout << " ";
-		cin.clear();
-		cin.ignore(numeric_limits<streamsize>::max(), '\n');
-		cin >> efficiency;
-	}
-
-	replacement.efficiency = efficiency;
-
-	cout << "\n\n";
-
-	return replacement;
-
-}
-
-save newSave(bool tubeAdded, bool stationAdded, tube mainTube, station mainStation)
-{
-	save mainSave;
-	mainSave.tubeAdded = tubeAdded;
-	mainSave.stationAdded = stationAdded;
-	mainSave.mainTube = mainTube;
-	mainSave.mainStation = mainStation;
-
-	return mainSave;
-}
-
-void pushSave(save saveData)
-{
-	ofstream out;
-	out.open("save.txt");
-	if (out)
-	{
-		out << saveData.tubeAdded << endl;				// Save tube status
-
-		out << saveData.stationAdded << endl;			//  Save station status
-
-		if (saveData.tubeAdded)				//  Save tube info
-			out << saveData.mainTube.length << " " << saveData.mainTube.diameter << " " << saveData.mainTube.onRepair << endl;
-
-		if (saveData.tubeAdded)				//  Save station info
-			out << saveData.mainStation.name << " " << saveData.mainStation.workshops << " " << saveData.mainStation.workshopsUsed << " " << saveData.mainStation.efficiency << " ";
-
-		out.close();
-	}
-}
-
-save loadSave()
-{
-	save mainSave = newSave(false, false, newTube(), newStation("Untitled"));
-
-	ifstream in;
-	in.open("save.txt");
-	if (in)
-	{
-		in >> mainSave.tubeAdded >> mainSave.stationAdded;
-		in >> mainSave.mainTube.length >> mainSave.mainTube.diameter >> mainSave.mainTube.onRepair;
-		in >> mainSave.mainStation.name >> mainSave.mainStation.workshops >> mainSave.mainStation.workshopsUsed >> mainSave.mainStation.efficiency;
-		in.close();
-	}
-	return mainSave;
+	file.close();
 }
 
 int main()
 {
 	setlocale(LC_ALL, "Ru");
-
+	
 	bool isRunning = true; // States if program is supposed to run
 
 	bool tubeAdded = false, stationAdded = false;
 	int command;
 
-	tube mainTube = newTube();
-	station mainStation = newStation("Untitled");
-	save saveData;
+	tube mainTube{ 0, 0, 0 };
+	station mainStation{ "Untitled", 0, 0, 0 };
 
 	while (isRunning)
 	{
+
 		printMenuOptions();
 
-		cout << "\nВведите команду: ";
-		cin >> command;
-		while (!cin || command < 0 || command > 8)
-		{
-			cout << "\nВведите команду: ";
-			cin.clear();
-			cin.ignore(numeric_limits<streamsize>::max(), '\n');
-			cin >> command;
-		}
+		read<int>(command, "Введите команду", 0, 8);
 
-		//  clc(); //  Clear screen
+		system("CLS"); //  Clear screen
 
 		switch (command)					//  Run the command got from user
 		{
@@ -309,18 +168,31 @@ int main()
 			isRunning = false;
 			break;
 		case 1:								//  Create tube
-			tubeAdded = true;
-			mainTube = newTube();
+			if (!tubeAdded)
+			{
+				tubeAdded = true;
+				read<int>(mainTube.length, "Введите длину трубы", 1);
+				read<int>(mainTube.diameter, "Введите диаметр трубы", 1);
+				read<bool>(mainTube.isWorking, "Введите статус трубы (1 - Работает, 0 - не работает)");
+			}
+			break;
 		case 4:								//  Edit tube
 			if (tubeAdded)
-				mainTube = editTube(mainTube);
+				read<bool>(mainTube.isWorking, "Введите статус трубы (1 - Работает, 0 - не работает)");
 			break;
 		case 2:								//  Create station
-			stationAdded = true;
-			mainStation = newStation("Untitled");
+			if (!stationAdded)
+			{
+				stationAdded = true;
+				read(mainStation.name, "Введите название станции");
+				read<int>(mainStation.workshops, "Введите число цехов", 1);
+				read<int>(mainStation.workshopsUsed, "Введите число активных цехов (Не более " + to_string(mainStation.workshops) + ")", 1, mainStation.workshops);
+				read<float>(mainStation.efficiency, "Введите эффективность станции (От 0 до 1)", 0, 1);
+			}
+			break;
 		case 5:								//  Edit station
 			if (stationAdded)
-				mainStation = editStation(mainStation);
+				read<int>(mainStation.workshopsUsed, "Введите число активных цехов (Не более " + to_string(mainStation.workshops) + ")", 1, mainStation.workshops);
 			break;
 		case 3:								//  Check if there is tube/station to print info about
 			if (tubeAdded)
@@ -328,18 +200,13 @@ int main()
 			if (stationAdded)
 				printStats(mainStation);
 			if (!(tubeAdded || stationAdded))
-				cout << "Ни станции, ни трубы не добавлено.\n\n";
+				cout << "Ни станции, ни трубы не добавлено.\n";
 			break;
 		case 6:								//  Save
-			saveData = newSave(tubeAdded, stationAdded, mainTube, mainStation);
-			pushSave(saveData);
+			save(tubeAdded, stationAdded, mainTube, mainStation);
 			break;
 		case 7:								//  Load
-			saveData = loadSave();
-			tubeAdded = saveData.tubeAdded;
-			stationAdded = saveData.stationAdded;
-			mainTube = saveData.mainTube;
-			mainStation = saveData.mainStation;
+			load(tubeAdded, stationAdded, mainTube, mainStation);
 			break;
 		case 8:								//  Clear
 			tubeAdded = false;
@@ -347,7 +214,7 @@ int main()
 			break;
 
 		}
-
+		cout << endl;
 	}
 
 }
